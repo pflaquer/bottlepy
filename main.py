@@ -309,7 +309,7 @@ def send_msg():
     try:
         # We include is_read=0 so it shows up as [NEW] in your inbox logic
         conn.execute("INSERT INTO messages (sender, receiver, body, is_read) VALUES (?, ?, ?, 0)", 
-                     (sender, receiver, body))
+                     (user, to_addr, body))
         conn.commit()
     except Exception as e:
         return f"Database Error: {str(e)} <a href='/messages'>Back</a>"
