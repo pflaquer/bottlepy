@@ -293,7 +293,7 @@ def read_msg(id):
     return redirect('/messages')
 
 
-
+"""#OLD SEND ROUTE?
 @route('/send', method='POST')
 def send_msg():
     # 1. Identity Check
@@ -308,8 +308,8 @@ def send_msg():
     conn = sqlite3.connect('todo.db')
     try:
         # We include is_read=0 so it shows up as [NEW] in your inbox logic
-        conn.execute("INSERT INTO messages (sender, receiver, body, is_read) VALUES (?, ?, ?, 0)", 
-                     (user, to_addr, body))
+        conn.execute("INSERT INTO messages (sender, receiver, body, subject, is_read) VALUES (?, ?, ?, ?, 0)", 
+                     (user, to_addr, body, subject))
         conn.commit()
     except Exception as e:
         return f"Database Error: {str(e)} <a href='/messages'>Back</a>"
@@ -318,7 +318,7 @@ def send_msg():
 
     return "Message Sent! <a href='/messages'>Back to Inbox</a>"
 
-
+"""
 
     
     
@@ -343,7 +343,7 @@ def contact_page():
     return '''
         <center>
             <h2>📧 Send a System Email</h2>
-            <form action="/send_email" method="POST">
+            <form action="/send" method="POST">
                 To: <input type="text" name="to_addr" placeholder="non@aol.com"><br><br>
                 Subject: <input type="text" name="subject" required><br><br>
                 Message:<br>
@@ -354,7 +354,7 @@ def contact_page():
         </center>
     '''
 
-@route('/send_email', method='POST')
+@route('/send', method='POST')
 def handle_email():
     user = request.get_cookie("account", secret=MY_SECRET)
     if not user: return redirect('/login')
@@ -368,12 +368,12 @@ def handle_email():
     to_addr = request.forms.get('to_addr')
     subject = request.forms.get('subject')
     body = request.forms.get('body')
-    email_data = f"To: {to_addr}\nSubject: {subject}\n\n{body}"
+    
     
    
     
-    conn.execute("INSERT INTO email_logs (username, to_addr, subject) VALUES (?, ?, ?)", 
-                 (user, to_addr, subject))
+    conn.execute("INSERT INTO messages (sender, receiver, body, subject, is_read) VALUES (?, ?, ?, ?, 0)", 
+                 (user, to_addr, body, subject))
     conn.execute("UPDATE users SET credits = credits - 10 WHERE username=?", (user,))
     conn.commit() # Save the deduction before sending!
     
