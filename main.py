@@ -198,7 +198,7 @@ def view_messages():
 
     if search_term:
         # Search for other users (excluding yourself)
-        cursor.execute("SELECT username FROM users WHERE username LIKE ? AND username != ? LIMIT 5", 
+        cursor.execute("SELECT username FROM users WHERE username LIKE ? AND username != ? LIMIT 10", 
                        (f"%{search_term}%", user))
         search_results = cursor.fetchall()
 
@@ -223,7 +223,7 @@ def view_messages():
         output += "<ul>"
         for (found_user,) in search_results:
             # We use the same 'Select' logic you mastered for the Reply button
-            output += f"<li>{found_user} <button onclick=\"document.getElementById('usernameto').value='{found_user}'\">Select</button></li>"
+            output += f"<li>{found_user} <button onclick=\"document.getElementById('usernameto').value='{found_user}'\">Select</button><button onclick=\"location.href='/view_profile/{found_user}'\">View Profile</button></li>"
         output += "</ul>"
     elif search_term:
         output += "<p>No users found.</p>"
@@ -254,8 +254,8 @@ def view_messages():
         </ul><hr>
         <h3>Send a Message</h3>
         <form action="/send" method="POST">
-            To (Username): <input type="text" name="to_user" id="usernameto" required><br>
-            Message: <input type="text" name="msg_body" id="bodyto" required>
+            To (Username): <input type="text" name="to_addr" id="usernameto" required><br>
+            Message: <input type="text" name="body" id="bodyto" required>
             <input type="submit" value="Send">
         </form>
         <br><a href="/">Back to Tasks</a>
@@ -340,6 +340,7 @@ def reply_page(to_user):
 
 @route('/contact')
 def contact_page():
+	
     return '''
         <center>
             <h2>📧 Send a System Email</h2>
@@ -361,6 +362,12 @@ def handle_email():
 
     conn = sqlite3.connect('todo.db')
     cursor = conn.cursor()
+    cursor.execute("SELECT credits FROM users WHERE username=?", (user,))
+    bal = cursor.fetchone()[0]
+    
+    if bal == 0: return f"ERROR NOT ENOUGH CREDITS<button onclick=\"location.href='/messages'\">Go Back</button>"
+    
+    
     
        
 
@@ -372,8 +379,8 @@ def handle_email():
     
    
     
-    conn.execute("INSERT INTO messages (sender, receiver, body, subject, is_read) VALUES (?, ?, ?, ?, 0)", 
-                 (user, to_addr, body, subject))
+    conn.execute("INSERT INTO messages (sender, receiver, body, is_read) VALUES (?, ?, ?, ?)", 
+                 (user, to_addr, body, 0))
     conn.execute("UPDATE users SET credits = credits - 10 WHERE username=?", (user,))
     conn.commit() # Save the deduction before sending!
     
@@ -516,10 +523,56 @@ def search_users():
             <li>{name} 
                 <button onclick="document.getElementById('usernameto').value='{name}';">
                     Select
+                </button><br><button onclick="location.href='/view_profile/{name}'">
+                    View Profile
                 </button>
             </li>'''
     output += "</ul>"
     return output
+    
+@route('/view_profile/<id>')
+def view_profile(id):
+	user = request.get_cookie("account", secret=MY_SECRET)
+	if not user: return redirect('/login')
+
+	conn = sqlite3.connect('todo.db')
+	cursor = conn.cursor()
+    
+    # Get user credits
+	cursor.execute("SELECT credits FROM users WHERE username=?", (id,))
+	credits = cursor.fetchone()[0]
+
+    
+	conn.close()
+   
+	return f'''
+    <html>
+    <head>
+
+        <style>
+            body {{ background-color: #008080; padding: 50px; }}
+            .window {{ width: 350px; margin: auto; }}
+        </style>
+    </head>
+    <body>
+        <div class="window">
+            <div class="title-bar">
+                <div class="title-bar-text">System Properties - {user}</div>
+            </div>
+            <div class="window-body">
+                <p><b>User Information:</b></p>
+                <ul class="tree-view">
+                    <li>Username: {id}</li>
+                    <li>Status: Registered Entrepreneur</li>
+                    <li>Current Balance: <font color="green">{credits} Credits</font></li>
+                    <li><button onclick=\"location.href='/messages'">Go Back</button></li>
+       
+            </div>
+       
+        </div>
+    </body>
+    </html>
+    '''
 
 
 if __name__ == '__main__':
